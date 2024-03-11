@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"macro":["base64_bytes"],"struct":["Base64Bytes"]};

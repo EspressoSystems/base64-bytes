@@ -1,0 +1,3 @@
+(function() {var implementors = {
+"base64_bytes":[["impl <a class=\"trait\" href=\"https://doc.rust-lang.org/1.76.0/core/marker/trait.Sync.html\" title=\"trait core::marker::Sync\">Sync</a> for <a class=\"struct\" href=\"base64_bytes/struct.Base64Bytes.html\" title=\"struct base64_bytes::Base64Bytes\">Base64Bytes</a>",1,["base64_bytes::Base64Bytes"]]]
+};if (window.register_implementors) {window.register_implementors(implementors);} else {window.pending_implementors = implementors;}})()
