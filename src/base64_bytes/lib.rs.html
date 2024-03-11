@@ -113,277 +113,117 @@
 <a href="#112" id="112">112</a>
 <a href="#113" id="113">113</a>
 <a href="#114" id="114">114</a>
-<a href="#115" id="115">115</a>
-<a href="#116" id="116">116</a>
-<a href="#117" id="117">117</a>
-<a href="#118" id="118">118</a>
-<a href="#119" id="119">119</a>
-<a href="#120" id="120">120</a>
-<a href="#121" id="121">121</a>
-<a href="#122" id="122">122</a>
-<a href="#123" id="123">123</a>
-<a href="#124" id="124">124</a>
-<a href="#125" id="125">125</a>
-<a href="#126" id="126">126</a>
-<a href="#127" id="127">127</a>
-<a href="#128" id="128">128</a>
-<a href="#129" id="129">129</a>
-<a href="#130" id="130">130</a>
-<a href="#131" id="131">131</a>
-<a href="#132" id="132">132</a>
-<a href="#133" id="133">133</a>
-<a href="#134" id="134">134</a>
-<a href="#135" id="135">135</a>
-<a href="#136" id="136">136</a>
-<a href="#137" id="137">137</a>
-<a href="#138" id="138">138</a>
-<a href="#139" id="139">139</a>
-<a href="#140" id="140">140</a>
-<a href="#141" id="141">141</a>
-<a href="#142" id="142">142</a>
-<a href="#143" id="143">143</a>
-<a href="#144" id="144">144</a>
-<a href="#145" id="145">145</a>
-<a href="#146" id="146">146</a>
-<a href="#147" id="147">147</a>
-<a href="#148" id="148">148</a>
-<a href="#149" id="149">149</a>
-<a href="#150" id="150">150</a>
-<a href="#151" id="151">151</a>
-<a href="#152" id="152">152</a>
-<a href="#153" id="153">153</a>
-<a href="#154" id="154">154</a>
-<a href="#155" id="155">155</a>
-<a href="#156" id="156">156</a>
-<a href="#157" id="157">157</a>
-<a href="#158" id="158">158</a>
-<a href="#159" id="159">159</a>
-<a href="#160" id="160">160</a>
-<a href="#161" id="161">161</a>
-<a href="#162" id="162">162</a>
-<a href="#163" id="163">163</a>
-<a href="#164" id="164">164</a>
-<a href="#165" id="165">165</a>
-<a href="#166" id="166">166</a>
-<a href="#167" id="167">167</a>
-<a href="#168" id="168">168</a>
-<a href="#169" id="169">169</a>
-<a href="#170" id="170">170</a>
-<a href="#171" id="171">171</a>
-<a href="#172" id="172">172</a>
-<a href="#173" id="173">173</a>
-<a href="#174" id="174">174</a>
-<a href="#175" id="175">175</a>
-<a href="#176" id="176">176</a>
-<a href="#177" id="177">177</a>
-<a href="#178" id="178">178</a>
-<a href="#179" id="179">179</a>
-<a href="#180" id="180">180</a>
-<a href="#181" id="181">181</a>
-<a href="#182" id="182">182</a>
-<a href="#183" id="183">183</a>
-<a href="#184" id="184">184</a>
-<a href="#185" id="185">185</a>
-<a href="#186" id="186">186</a>
-<a href="#187" id="187">187</a>
-<a href="#188" id="188">188</a>
-<a href="#189" id="189">189</a>
-<a href="#190" id="190">190</a>
-<a href="#191" id="191">191</a>
-<a href="#192" id="192">192</a>
-<a href="#193" id="193">193</a>
-<a href="#194" id="194">194</a>
 </pre></div><pre class="rust"><code><span class="doccomment">//! Intelligent serialization for binary blobs.
+//!
+//! Where `Vec&lt;u8&gt;` always serializes as an array of bytes, this crate provides serialization
+//! functions which try to make an intelligent decision about how to serialize a byte vector based
+//! on the serialization format.
+//!
+//! For binary formats like [`bincode`](https://docs.rs/bincode/latest/bincode/), the array-of-bytes
+//! serialization works great: it is compact and introduces very little overhead. But for
+//! human-readable types such as [`serde_json`](https://docs.rs/serde_json/latest/serde_json/), it's
+//! far from ideal. The text encoding of an array introduces substantial overhead, and the resulting
+//! array of opaque bytes isn't particularly readable anyways.
+//!
+//! `base64-bytes` uses the [`is_human_readable`](serde::Serializer::is_human_readable) property of
+//! a serializer to distinguish these cases. For binary formats, it uses the default `Vec&lt;u8&gt;`
+//! serialization. For human-readable formats, it uses a much more compact and conventional base 64
+//! encoding.
+//!
+//! # Usage
+//!
+//! The interface consists of [`serialize`] and [`deserialize`] functions. While these _can_ be
+//! called directly, they are intended to be used with serde's
+//! [field attributes](https://serde.rs/field-attrs.html) controlling serialization, like:
+//!
+//! ```
+//! use serde::{Deserialize, Serialize};
+//!
+//! #[derive(Deserialize, Serialize)]
+//! struct SomeType {
+//!     #[serde(
+//!         serialize_with = "base64_bytes::serialize",
+//!         deserialize_with = "base64_bytes::deserialize",
+//!     )]
+//!     bytes: Vec&lt;u8&gt;,
+//! }
+//! ```
+//!
+//! Or, as a shorthand:
+//!
+//! ```
+//! use serde::{Deserialize, Serialize};
+//!
+//! #[derive(Deserialize, Serialize)]
+//! struct SomeType {
+//!     #[serde(with = "base64_bytes")]
+//!     bytes: Vec&lt;u8&gt;,
+//! }
+//! ```
+//!
 
-</span><span class="kw">use </span>ark_serialize::{CanonicalDeserialize, CanonicalSerialize};
-<span class="kw">use </span>base64::{engine::general_purpose::STANDARD <span class="kw">as </span>BASE64, Engine};
-<span class="kw">use </span>derive_more::{From, Into};
+</span><span class="kw">use </span>base64::{engine::general_purpose::STANDARD <span class="kw">as </span>BASE64, Engine};
 <span class="kw">use </span>serde::{
     de::{Deserialize, Deserializer, Error},
     ser::{Serialize, Serializer},
 };
-<span class="kw">use </span>std::{
-    ops::{Deref, DerefMut},
-    slice::SliceIndex,
-};
 
-<span class="doccomment">/// An unstructured byte array with smart serialization.
-///
-/// [`Base64Bytes`] mostly acts as a simple byte array, `Vec&lt;u8&gt;`. It can easily be converted to and
-/// from a `Vec&lt;u8&gt;`, and it implements many of the same traits as [`Vec`]. In fact internally it
-/// merely wraps a `Vec&lt;u8&gt;`.
-///
-/// The only difference is in how it serializes. `Vec&lt;u8&gt;` serializes very efficiently using
-/// `bincode`, but using `serde_json`, it serializes as a JSON array of integers, which is
-/// unconventional and inefficient. It is better, in JSON, to serialize binary data as a
-/// base64-encoded string. [`Base64Bytes`] uses the
-/// [`is_human_readable`](Serializer::is_human_readable) property of a [`Serializer`] to detect
-/// whether we are serializing for a compact binary format (like `bincode`) or a human-readable
-/// format (like JSON). In the former cases, it serializes directly as an array of bytes. In the
-/// latter case, it serializes as a string using base 64.
-</span><span class="attr">#[derive(
-    Clone,
-    Debug,
-    Default,
-    PartialEq,
-    Eq,
-    Hash,
-    PartialOrd,
-    Ord,
-    From,
-    Into,
-    CanonicalSerialize,
-    CanonicalDeserialize,
-)]
-</span><span class="kw">pub struct </span>Base64Bytes(Vec&lt;u8&gt;);
-
-<span class="kw">impl </span>Base64Bytes {
-    <span class="kw">pub fn </span>get&lt;I&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>, index: I) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>I::Output&gt;
-    <span class="kw">where
-        </span>I: SliceIndex&lt;[u8]&gt;,
-    {
-        <span class="self">self</span>.<span class="number">0</span>.get(index)
+<span class="doccomment">/// Serialize a byte vector.
+</span><span class="kw">pub fn </span>serialize&lt;S: Serializer, T: AsRef&lt;[u8]&gt;&gt;(v: <span class="kw-2">&amp;</span>T, s: S) -&gt; <span class="prelude-ty">Result</span>&lt;S::Ok, S::Error&gt; {
+    <span class="kw">if </span>s.is_human_readable() {
+        BASE64.encode(v).serialize(s)
+    } <span class="kw">else </span>{
+        v.as_ref().serialize(s)
     }
 }
 
-<span class="kw">impl </span>Serialize <span class="kw">for </span>Base64Bytes {
-    <span class="kw">fn </span>serialize&lt;S: Serializer&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>, s: S) -&gt; <span class="prelude-ty">Result</span>&lt;S::Ok, S::Error&gt; {
-        <span class="kw">if </span>s.is_human_readable() {
-            BASE64.encode(<span class="self">self</span>).serialize(s)
-        } <span class="kw">else </span>{
-            <span class="self">self</span>.<span class="number">0</span>.serialize(s)
-        }
-    }
-}
-
-<span class="kw">impl</span>&lt;<span class="lifetime">'a</span>&gt; Deserialize&lt;<span class="lifetime">'a</span>&gt; <span class="kw">for </span>Base64Bytes {
-    <span class="kw">fn </span>deserialize&lt;D: Deserializer&lt;<span class="lifetime">'a</span>&gt;&gt;(d: D) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, D::Error&gt; {
-        <span class="kw">if </span>d.is_human_readable() {
-            <span class="prelude-val">Ok</span>(<span class="self">Self</span>(BASE64.decode(String::deserialize(d)<span class="question-mark">?</span>).map_err(
-                |err| D::Error::custom(<span class="macro">format!</span>(<span class="string">"invalid base64: {err}"</span>)),
-            )<span class="question-mark">?</span>))
-        } <span class="kw">else </span>{
-            <span class="prelude-val">Ok</span>(<span class="self">Self</span>(Vec::deserialize(d)<span class="question-mark">?</span>))
-        }
-    }
-}
-
-<span class="kw">impl </span>From&lt;<span class="kw-2">&amp;</span>[u8]&gt; <span class="kw">for </span>Base64Bytes {
-    <span class="kw">fn </span>from(bytes: <span class="kw-2">&amp;</span>[u8]) -&gt; <span class="self">Self </span>{
-        <span class="self">Self</span>(bytes.into())
-    }
-}
-
-<span class="kw">impl</span>&lt;<span class="kw">const </span>N: usize&gt; From&lt;[u8; N]&gt; <span class="kw">for </span>Base64Bytes {
-    <span class="kw">fn </span>from(bytes: [u8; N]) -&gt; <span class="self">Self </span>{
-        <span class="self">Self</span>(bytes.into())
-    }
-}
-
-<span class="kw">impl</span>&lt;<span class="kw">const </span>N: usize&gt; From&lt;<span class="kw-2">&amp;</span>[u8; N]&gt; <span class="kw">for </span>Base64Bytes {
-    <span class="kw">fn </span>from(bytes: <span class="kw-2">&amp;</span>[u8; N]) -&gt; <span class="self">Self </span>{
-        <span class="self">Self</span>(bytes.into())
-    }
-}
-
-<span class="kw">impl </span>FromIterator&lt;u8&gt; <span class="kw">for </span>Base64Bytes {
-    <span class="kw">fn </span>from_iter&lt;I: IntoIterator&lt;Item = u8&gt;&gt;(iter: I) -&gt; <span class="self">Self </span>{
-        <span class="self">Self</span>(iter.into_iter().collect())
-    }
-}
-
-<span class="kw">impl </span>AsRef&lt;[u8]&gt; <span class="kw">for </span>Base64Bytes {
-    <span class="kw">fn </span>as_ref(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span>[u8] {
-        <span class="self">self</span>.<span class="number">0</span>.as_ref()
-    }
-}
-
-<span class="kw">impl </span>AsMut&lt;[u8]&gt; <span class="kw">for </span>Base64Bytes {
-    <span class="kw">fn </span>as_mut(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;mut </span>[u8] {
-        <span class="self">self</span>.<span class="number">0</span>.as_mut()
-    }
-}
-
-<span class="kw">impl </span>Deref <span class="kw">for </span>Base64Bytes {
-    <span class="kw">type </span>Target = [u8];
-
-    <span class="kw">fn </span>deref(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span>[u8] {
-        <span class="self">self</span>.as_ref()
-    }
-}
-
-<span class="kw">impl </span>DerefMut <span class="kw">for </span>Base64Bytes {
-    <span class="kw">fn </span>deref_mut(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;mut </span>[u8] {
-        <span class="self">self</span>.as_mut()
-    }
-}
-
-<span class="kw">impl </span>PartialEq&lt;[u8]&gt; <span class="kw">for </span>Base64Bytes {
-    <span class="kw">fn </span>eq(<span class="kw-2">&amp;</span><span class="self">self</span>, other: <span class="kw-2">&amp;</span>[u8]) -&gt; bool {
-        <span class="self">self</span>.as_ref() == other
-    }
-}
-
-<span class="kw">impl</span>&lt;<span class="kw">const </span>N: usize&gt; PartialEq&lt;[u8; N]&gt; <span class="kw">for </span>Base64Bytes {
-    <span class="kw">fn </span>eq(<span class="kw-2">&amp;</span><span class="self">self</span>, other: <span class="kw-2">&amp;</span>[u8; N]) -&gt; bool {
-        <span class="self">self</span>.as_ref() == other
-    }
-}
-
-<span class="kw">impl </span>PartialEq&lt;Vec&lt;u8&gt;&gt; <span class="kw">for </span>Base64Bytes {
-    <span class="kw">fn </span>eq(<span class="kw-2">&amp;</span><span class="self">self</span>, other: <span class="kw-2">&amp;</span>Vec&lt;u8&gt;) -&gt; bool {
-        <span class="self">self</span>.<span class="number">0 </span>== <span class="kw-2">*</span>other
-    }
-}
-
-<span class="kw">impl</span>&lt;T&gt; Extend&lt;T&gt; <span class="kw">for </span>Base64Bytes
-<span class="kw">where
-    </span>Vec&lt;u8&gt;: Extend&lt;T&gt;,
-{
-    <span class="kw">fn </span>extend&lt;I: IntoIterator&lt;Item = T&gt;&gt;(<span class="kw-2">&amp;mut </span><span class="self">self</span>, iter: I) {
-        <span class="self">self</span>.<span class="number">0</span>.extend(iter);
-    }
-}
-
-<span class="doccomment">/// Create a [`Base64Bytes`] blob from elements.
-///
-/// This macro works exactly like the standard `vec![...]` macro.
-</span><span class="attr">#[macro_export]
-</span><span class="macro">macro_rules! </span>base64_bytes {
-    [$(<span class="macro-nonterminal">$elem</span>:expr),* $(,)<span class="question-mark">?</span>] =&gt; {
-        <span class="macro-nonterminal">$crate::Base64Bytes::from</span>(<span class="macro">vec!</span>[$(<span class="macro-nonterminal">$elem</span>),<span class="kw-2">*</span>])
-    };
-    [<span class="macro-nonterminal">$elem</span>:expr; <span class="macro-nonterminal">$size</span>:expr] =&gt; {
-        <span class="macro-nonterminal">$crate::Base64Bytes::from</span>(<span class="macro">vec!</span>[<span class="macro-nonterminal">$elem</span>; <span class="macro-nonterminal">$size</span>])
+<span class="doccomment">/// Deserialize a byte vector.
+</span><span class="kw">pub fn </span>deserialize&lt;<span class="lifetime">'a</span>, D: Deserializer&lt;<span class="lifetime">'a</span>&gt;&gt;(d: D) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;u8&gt;, D::Error&gt; {
+    <span class="kw">if </span>d.is_human_readable() {
+        <span class="prelude-val">Ok</span>(BASE64
+            .decode(String::deserialize(d)<span class="question-mark">?</span>)
+            .map_err(|err| D::Error::custom(<span class="macro">format!</span>(<span class="string">"invalid base64: {err}"</span>)))<span class="question-mark">?</span>)
+    } <span class="kw">else </span>{
+        <span class="prelude-val">Ok</span>(Vec::deserialize(d)<span class="question-mark">?</span>)
     }
 }
 
 <span class="attr">#[cfg(test)]
 </span><span class="kw">mod </span>test {
-    <span class="kw">use super</span>::<span class="kw-2">*</span>;
+    <span class="kw">use </span><span class="kw">crate</span>::BASE64;
+    <span class="kw">use </span>base64::Engine;
     <span class="kw">use </span>rand::RngCore;
+    <span class="kw">use </span>serde::{Deserialize, Serialize};
+
+    <span class="attr">#[derive(Debug, PartialEq, Eq, Deserialize, Serialize)]
+    </span><span class="kw">struct </span>Test {
+        <span class="attr">#[serde(with = <span class="string">"crate"</span>)]
+        </span>bytes: Vec&lt;u8&gt;,
+    }
 
     <span class="attr">#[test]
     </span><span class="kw">fn </span>test_bytes_serde() {
         <span class="kw">let </span><span class="kw-2">mut </span>rng = rand::thread_rng();
 
         <span class="kw">for </span>len <span class="kw">in </span>[<span class="number">0</span>, <span class="number">1</span>, <span class="number">10</span>, <span class="number">1000</span>] {
-            <span class="kw">let </span><span class="kw-2">mut </span>bytes = <span class="macro">base64_bytes!</span>[<span class="number">0</span>; len];
-            rng.fill_bytes(<span class="kw-2">&amp;mut </span>bytes);
+            <span class="kw">let </span><span class="kw-2">mut </span>t = Test {
+                bytes: <span class="macro">vec!</span>[<span class="number">0</span>; len],
+            };
+            rng.fill_bytes(<span class="kw-2">&amp;mut </span>t.bytes);
 
             <span class="comment">// The binary serialization should be highly efficient: just the length followed by the
             // raw bytes.
-            </span><span class="kw">let </span>binary = bincode::serialize(<span class="kw-2">&amp;</span>bytes).unwrap();
+            </span><span class="kw">let </span>binary = bincode::serialize(<span class="kw-2">&amp;</span>t).unwrap();
             <span class="macro">assert_eq!</span>(binary[..<span class="number">8</span>], (len <span class="kw">as </span>u64).to_le_bytes());
-            <span class="macro">assert_eq!</span>(bytes, binary[<span class="number">8</span>..]);
+            <span class="macro">assert_eq!</span>(t.bytes, binary[<span class="number">8</span>..]);
             <span class="comment">// Check deserialization.
-            </span><span class="macro">assert_eq!</span>(bytes, bincode::deserialize::&lt;Base64Bytes&gt;(<span class="kw-2">&amp;</span>binary).unwrap());
+            </span><span class="macro">assert_eq!</span>(t, bincode::deserialize::&lt;Test&gt;(<span class="kw-2">&amp;</span>binary).unwrap());
 
             <span class="comment">// The JSON serialization should return a base 64 string.
-            </span><span class="kw">let </span>json = serde_json::to_value(<span class="kw-2">&amp;</span>bytes).unwrap();
-            <span class="macro">assert_eq!</span>(json.as_str().unwrap(), BASE64.encode(<span class="kw-2">&amp;</span>bytes));
+            </span><span class="kw">let </span>json = serde_json::to_value(<span class="kw-2">&amp;</span>t).unwrap();
+            <span class="macro">assert_eq!</span>(json[<span class="string">"bytes"</span>].as_str().unwrap(), BASE64.encode(<span class="kw-2">&amp;</span>t.bytes));
             <span class="comment">// Check deserialization.
-            </span><span class="macro">assert_eq!</span>(bytes, serde_json::from_value::&lt;Base64Bytes&gt;(json).unwrap());
+            </span><span class="macro">assert_eq!</span>(t, serde_json::from_value::&lt;Test&gt;(json).unwrap());
         }
     }
 }

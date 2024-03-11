@@ -1,3 +1,0 @@
-(function() {var implementors = {
-"base64_bytes":[["impl <a class=\"trait\" href=\"https://docs.rs/serde/1.0.197/serde/ser/trait.Serialize.html\" title=\"trait serde::ser::Serialize\">Serialize</a> for <a class=\"struct\" href=\"base64_bytes/struct.Base64Bytes.html\" title=\"struct base64_bytes::Base64Bytes\">Base64Bytes</a>"]]
-};if (window.register_implementors) {window.register_implementors(implementors);} else {window.pending_implementors = implementors;}})()
