@@ -5,6 +5,8 @@ on:
     branches:
       - main
       - release-*
+    tags:
+      - v*.*.*
   pull_request:
     branches:
       - main
@@ -148,5 +150,6 @@ jobs:
             override: true
       - uses: katyo/publish-crates@v2
         with:
-            dry-run: ${{ github.event_name != 'push' }}
+            # Only do an actual publish if this is a push to a release tag. Otherwise, do a dry run.
+            dry-run: ${{ !(github.event_name == 'push' && github.ref_type == 'tag') }}
             ignore-unpublished-changes: true
