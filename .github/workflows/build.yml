@@ -36,11 +36,8 @@ jobs:
       - name: Format Check
         run: cargo fmt -- --check
 
-      - uses: actions-rs/clippy-check@v1
-        name: Clippy
-        with:
-          token: ${{ github.token }}
-          args: --workspace --all-features --all-targets -- -D warnings
+      - name: Clippy
+        run: cargo clippy --workspace --all-features --all-targets -- -D warnings
 
   build:
     runs-on: ubuntu-latest
@@ -144,10 +141,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: actions-rs/toolchain@v1
-        with:
-            toolchain: stable
-            override: true
+      - uses: dtolnay/rust-toolchain@stable
       - uses: katyo/publish-crates@v2
         with:
             # Only do an actual publish if this is a push to a release tag. Otherwise, do a dry run.
