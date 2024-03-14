@@ -12,6 +12,34 @@ on:
   workflow_dispatch:
 
 jobs:
+  lint:
+    runs-on: ubuntu-latest
+    env:
+        RUST_LOG: info
+    steps:
+      - uses: styfle/cancel-workflow-action@0.12.1
+        name: Cancel Outdated Builds
+        with:
+          all_but_latest: true
+          access_token: ${{ github.token }}
+
+      - uses: actions/checkout@v4
+        name: Checkout Repository
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: Swatinem/rust-cache@v2
+        name: Enable Rust Caching
+
+      - name: Format Check
+        run: cargo fmt -- --check
+
+      - uses: actions-rs/clippy-check@v1
+        name: Clippy
+        with:
+          token: ${{ github.token }}
+          args: --workspace --all-features --all-targets -- -D warnings
+
   build:
     runs-on: ubuntu-latest
     env:
@@ -46,3 +74,79 @@ jobs:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: ./target/doc
           cname: tide-disco.docs.espressosys.com
+
+  test:
+    runs-on: ubuntu-latest
+    env:
+        RUST_LOG: info
+    steps:
+      - uses: styfle/cancel-workflow-action@0.12.1
+        name: Cancel Outdated Builds
+        with:
+          all_but_latest: true
+          access_token: ${{ github.token }}
+
+      - uses: actions/checkout@v4
+        name: Checkout Repository
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: Swatinem/rust-cache@v2
+        name: Enable Rust Caching
+
+      - name: Build tests
+        run: cargo test --workspace --release --all-features --no-run
+
+      - name: Test
+        run: cargo test --workspace --release --all-features --verbose -- --test-threads 2
+        timeout-minutes: 60
+
+  docs:
+    runs-on: ubuntu-latest
+    env:
+        RUST_LOG: info
+    steps:
+      - uses: styfle/cancel-workflow-action@0.12.1
+        name: Cancel Outdated Builds
+        with:
+          all_but_latest: true
+          access_token: ${{ github.token }}
+
+      - uses: actions/checkout@v4
+        name: Checkout Repository
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: Swatinem/rust-cache@v2
+        name: Enable Rust Caching
+
+      - name: Generate Documentation
+        run: |
+          cargo doc --no-deps --lib --release --all-features
+          echo '<meta http-equiv="refresh" content="0; url=base64_bytes">' > target/doc/index.html
+
+      - name: Deploy Documentation
+        uses: peaceiris/actions-gh-pages@v3
+        if: ${{ github.ref == 'refs/heads/main' }}
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./target/doc
+          cname: base64-bytes.docs.espressosys.com
+
+  publish:
+    needs:
+      - build
+      - test
+      - lint
+      - docs
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions-rs/toolchain@v1
+        with:
+            toolchain: stable
+            override: true
+      - uses: katyo/publish-crates@v2
+        with:
+            dry-run: ${{ github.event_name != 'push' }}
+            ignore-unpublished-changes: true
