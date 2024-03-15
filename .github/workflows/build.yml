@@ -136,9 +136,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@stable
       - uses: katyo/publish-crates@v2
         with:
             # Only do an actual publish if this is a push to a release tag. Otherwise, do a dry run.
             dry-run: ${{ !(github.event_name == 'push' && github.ref_type == 'tag') }}
             ignore-unpublished-changes: true
+            registry-token: ${{ secrets.CARGO_REGISTRY_TOKEN }}
