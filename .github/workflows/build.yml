@@ -13,18 +13,16 @@ on:
       - release-*
   workflow_dispatch:
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   lint:
     runs-on: ubuntu-latest
     env:
         RUST_LOG: info
     steps:
-      - uses: styfle/cancel-workflow-action@0.12.1
-        name: Cancel Outdated Builds
-        with:
-          all_but_latest: true
-          access_token: ${{ github.token }}
-
       - uses: actions/checkout@v4
         name: Checkout Repository
 
@@ -35,7 +33,7 @@ jobs:
         run: cargo fmt -- --check
 
       - name: Clippy
-        uses: actions-rs/clippy-check@v1
+        uses: actions-rs-plus/clippy-check@v1
         with:
             token: ${{ github.token }}
             args: --workspace --all-features --all-targets -- -D warnings
@@ -45,12 +43,6 @@ jobs:
     env:
         RUST_LOG: info
     steps:
-      - uses: styfle/cancel-workflow-action@0.12.1
-        name: Cancel Outdated Builds
-        with:
-          all_but_latest: true
-          access_token: ${{ github.token }}
-
       - uses: actions/checkout@v4
         name: Checkout Repository
 
@@ -60,30 +52,11 @@ jobs:
       - name: Build
         run: cargo build --all-features --all-targets --release
 
-      - name: Generate Documentation
-        run: |
-          cargo doc --no-deps --lib --release --all-features
-          echo '<meta http-equiv="refresh" content="0; url=hotshot_query_service">' > target/doc/index.html
-
-      - name: Deploy Documentation
-        uses: peaceiris/actions-gh-pages@v3
-        if: ${{ github.ref == 'refs/heads/main' }}
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./target/doc
-          cname: tide-disco.docs.espressosys.com
-
   test:
     runs-on: ubuntu-latest
     env:
         RUST_LOG: info
     steps:
-      - uses: styfle/cancel-workflow-action@0.12.1
-        name: Cancel Outdated Builds
-        with:
-          all_but_latest: true
-          access_token: ${{ github.token }}
-
       - uses: actions/checkout@v4
         name: Checkout Repository
 
@@ -102,12 +75,6 @@ jobs:
     env:
         RUST_LOG: info
     steps:
-      - uses: styfle/cancel-workflow-action@0.12.1
-        name: Cancel Outdated Builds
-        with:
-          all_but_latest: true
-          access_token: ${{ github.token }}
-
       - uses: actions/checkout@v4
         name: Checkout Repository
 
