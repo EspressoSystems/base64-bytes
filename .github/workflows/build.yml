@@ -28,19 +28,17 @@ jobs:
       - uses: actions/checkout@v4
         name: Checkout Repository
 
-      - uses: dtolnay/rust-toolchain@stable
-
       - uses: Swatinem/rust-cache@v2
         name: Enable Rust Caching
 
       - name: Format Check
         run: cargo fmt -- --check
 
-      - uses: actions-rs/clippy-check@v1
-        name: Clippy
+      - name: Clippy
+        uses: actions-rs/clippy-check@v1
         with:
-          token: ${{ github.token }}
-          args: --workspace --all-features --all-targets -- -D warnings
+            token: ${{ github.token }}
+            args: --workspace --all-features --all-targets -- -D warnings
 
   build:
     runs-on: ubuntu-latest
@@ -55,8 +53,6 @@ jobs:
 
       - uses: actions/checkout@v4
         name: Checkout Repository
-
-      - uses: dtolnay/rust-toolchain@stable
 
       - uses: Swatinem/rust-cache@v2
         name: Enable Rust Caching
@@ -91,8 +87,6 @@ jobs:
       - uses: actions/checkout@v4
         name: Checkout Repository
 
-      - uses: dtolnay/rust-toolchain@stable
-
       - uses: Swatinem/rust-cache@v2
         name: Enable Rust Caching
 
@@ -116,8 +110,6 @@ jobs:
 
       - uses: actions/checkout@v4
         name: Checkout Repository
-
-      - uses: dtolnay/rust-toolchain@stable
 
       - uses: Swatinem/rust-cache@v2
         name: Enable Rust Caching
@@ -144,10 +136,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: actions-rs/toolchain@v1
-        with:
-            toolchain: stable
-            override: true
+      - uses: dtolnay/rust-toolchain@stable
       - uses: katyo/publish-crates@v2
         with:
             # Only do an actual publish if this is a push to a release tag. Otherwise, do a dry run.
