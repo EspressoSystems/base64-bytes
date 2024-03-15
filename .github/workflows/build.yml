@@ -94,12 +94,25 @@ jobs:
           publish_dir: ./target/doc
           cname: base64-bytes.docs.espressosys.com
 
+  semver-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        name: Checkout Repository
+
+      - uses: Swatinem/rust-cache@v2
+        name: Enable Rust Caching
+
+      - name: Check semver
+        uses: obi1kenobi/cargo-semver-checks-action@v2
+
   publish:
     needs:
       - build
       - test
       - lint
       - docs
+      - semver-check
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
