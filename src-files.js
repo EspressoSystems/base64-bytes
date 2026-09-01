@@ -1,4 +1,2 @@
-var srcIndex = new Map(JSON.parse('[\
-["base64_bytes",["",[],["lib.rs"]]]\
-]'));
-createSrcSidebar();
+createSrcSidebar('[["base64_bytes",["",[],["lib.rs"]]]]');
+//{"start":19,"fragment_lengths":[35]}
