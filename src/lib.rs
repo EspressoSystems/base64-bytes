@@ -58,10 +58,6 @@ pub fn serialize<S: Serializer, T: AsRef<[u8]>>(v: &T, s: S) -> Result<S::Ok, S:
     if s.is_human_readable() {
         BASE64.encode(v).serialize(s)
     } else {
-        // `<[u8]>::serialize` is a `serialize_seq` plus one `serialize_element` per byte, which a
-        // format is free to write as length-then-bytes but must still be *asked* to write a byte
-        // at a time. `serialize_bytes` states the whole blob in one call, which is the same thing
-        // on the wire and roughly fifty times faster for a megabyte.
         s.serialize_bytes(v.as_ref())
     }
 }
