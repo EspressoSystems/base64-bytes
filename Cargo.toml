@@ -1,6 +1,6 @@
 [package]
 name = "base64-bytes"
-version = "0.1.0"
+version = "0.1.1"
 authors = ["Espresso Systems <hello@espressosys.com>"]
 description = "Binary blobs with intelligent serialization"
 license = "MIT"
