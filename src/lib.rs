@@ -86,8 +86,11 @@ pub fn deserialize<'a, D: Deserializer<'a>>(d: D) -> Result<Vec<u8>, D::Error> {
 
 #[cfg(test)]
 mod test {
+    use std::io::Cursor;
+
     use crate::BASE64;
     use base64::Engine;
+    use bincode::Options;
     use rand::RngCore;
     use serde::de::{value::Error as ValueError, Deserializer, Error, Visitor};
     use serde::{Deserialize, Serialize};
@@ -209,5 +212,24 @@ mod test {
             // Check deserialization.
             assert_eq!(t, serde_json::from_value::<Test>(json).unwrap());
         }
+    }
+
+    /// A hostile stream can name a length far larger than what it will deliver, and the binary
+    /// branch sizes its buffer from that length before reading any of it. bincode charges the
+    /// length against its size limit first, so a reader configured with one rejects the claim
+    /// without allocating; unlimited readers do not. The `deserialize` docs point callers here.
+    #[test]
+    fn a_size_limit_rejects_a_hostile_length_before_allocating() {
+        let mut input = (256u64 * 1024 * 1024).to_le_bytes().to_vec();
+        input.extend_from_slice(&[1, 2, 3, 4]);
+
+        let err = bincode::DefaultOptions::new()
+            .with_limit(1024 * 1024)
+            .with_little_endian()
+            .with_fixint_encoding()
+            .deserialize_from::<_, Test>(Cursor::new(&input))
+            .unwrap_err();
+
+        assert!(matches!(*err, bincode::ErrorKind::SizeLimit), "{err}");
     }
 }

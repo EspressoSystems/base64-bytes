@@ -21,3 +21,14 @@ Length-prefixed binary formats such as `bincode` and `postcard` encode this iden
 byte-at-a-time `Vec<u8>` serialization, so the wire format is unchanged. Self-describing formats
 that distinguish byte strings from arrays, such as CBOR and MessagePack, now emit a byte string;
 deserialization still accepts either.
+
+## Reading untrusted input
+
+Binary deserialization sizes its buffer from the format's length prefix before reading any bytes,
+so a peer that claims a large length gets a large allocation for free. Readers of untrusted input
+must bound this at the format layer, e.g. `bincode::options().with_limit(n)`, which rejects the
+claim before allocating. Unbounded streaming readers such as `bincode::deserialize_from` over a
+socket do not. Deserializing from an in-memory slice is bounded by the slice itself and is
+unaffected, as is anything already applying a size limit.
+
+This is the same exposure any `String` field already carries under those readers.
