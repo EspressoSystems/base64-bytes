@@ -18,8 +18,8 @@
 //!
 //! Length-prefixed binary formats such as `bincode` and `postcard` encode this identically to the
 //! byte-at-a-time `Vec<u8>` serialization, so the wire format is unchanged. Self-describing formats
-//! that distinguish byte strings from arrays, such as CBOR and MessagePack, now emit a byte string;
-//! deserialization still accepts either.
+//! that distinguish byte strings from arrays, such as CBOR and MessagePack, emit a byte string;
+//! deserialization accepts either a byte string or an array.
 //!
 //! # Usage
 //!
@@ -72,8 +72,11 @@ pub fn serialize<S: Serializer, T: AsRef<[u8]>>(v: &T, s: S) -> Result<S::Ok, S:
 ///
 /// The binary branch asks the format for the whole blob at once, so the destination buffer is
 /// sized from the format's length prefix before any bytes are read. Readers of untrusted input
-/// must bound that themselves, e.g. `bincode::options().with_limit(n)`; an unbounded
-/// `bincode::deserialize_from` over a socket will allocate whatever length the peer claims.
+/// must bound that themselves, e.g.
+/// `bincode::DefaultOptions::new().with_fixint_encoding().allow_trailing_bytes().with_limit(n)`;
+/// the fixint and trailing-bytes settings keep it compatible with `bincode::serialize`. An
+/// unbounded `bincode::deserialize_from` over a socket will allocate whatever length the peer
+/// claims.
 pub fn deserialize<'a, D: Deserializer<'a>>(d: D) -> Result<Vec<u8>, D::Error> {
     if d.is_human_readable() {
         Ok(BASE64
@@ -91,9 +94,11 @@ mod test {
     use crate::BASE64;
     use base64::Engine;
     use bincode::Options;
+    use ciborium::{from_reader, into_writer};
     use rand::RngCore;
     use serde::de::{value::Error as ValueError, Deserializer, Error, Visitor};
     use serde::{Deserialize, Serialize};
+    use serde_bytes::ByteBuf;
 
     #[derive(Debug, PartialEq, Eq, Deserialize, Serialize)]
     struct Test {
@@ -188,6 +193,45 @@ mod test {
         }
     }
 
+    #[derive(Serialize)]
+    struct PlainVec {
+        bytes: Vec<u8>,
+    }
+
+    #[derive(Serialize)]
+    struct ByteString {
+        bytes: ByteBuf,
+    }
+
+    fn cbor<T: Serialize>(t: &T) -> Vec<u8> {
+        let mut out = vec![];
+        into_writer(t, &mut out).unwrap();
+        out
+    }
+
+    #[test]
+    fn self_describing_formats_emit_byte_strings_and_accept_either() {
+        for (bytes, ..) in V0_1_0 {
+            let expected = Test {
+                bytes: bytes.to_vec(),
+            };
+
+            let array = cbor(&PlainVec {
+                bytes: bytes.to_vec(),
+            });
+            assert_eq!(from_reader::<Test, _>(&array[..]).unwrap(), expected);
+
+            let byte_string = cbor(&expected);
+            assert_eq!(from_reader::<Test, _>(&byte_string[..]).unwrap(), expected);
+            assert_eq!(
+                byte_string,
+                cbor(&ByteString {
+                    bytes: ByteBuf::from(bytes.to_vec())
+                })
+            );
+        }
+    }
+
     #[test]
     fn test_bytes_serde() {
         let mut rng = rand::thread_rng();
@@ -224,9 +268,9 @@ mod test {
         input.extend_from_slice(&[1, 2, 3, 4]);
 
         let err = bincode::DefaultOptions::new()
-            .with_limit(1024 * 1024)
-            .with_little_endian()
             .with_fixint_encoding()
+            .allow_trailing_bytes()
+            .with_limit(1024 * 1024)
             .deserialize_from::<_, Test>(Cursor::new(&input))
             .unwrap_err();
 
